@@ -1,0 +1,68 @@
+-- Safe version: não baixa nem executa código remoto.
+-- Uso: coloque em ServerScriptService para executar no servidor
+-- ou em StarterGui (LocalScript) para execução local (adapte prints/UI conforme desejar).
+
+_G.AUTOCOFIZIN = "COFI-88JO-YRL2-D3L4" -- só uma constante local/global, inofensiva
+
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+
+-- Configurações
+local SEARCH_KEYWORD = "brainrot"  -- palavra-chave para identificar objetos
+local MAX_PRINT = 200              -- limite de itens listados no console
+
+-- Função que coleta objetos pelo nome (case-insensitive)
+local function collectObjectsByName(keyword)
+    local found = {}
+    local lowerKey = string.lower(keyword)
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        local ok, name = pcall(function() return tostring(obj.Name) end)
+        if ok and type(name) == "string" then
+            if string.find(string.lower(name), lowerKey, 1, true) then
+                local info = {
+                    name = obj.Name,
+                    class = obj.ClassName,
+                }
+                if obj:IsA("Model") and obj.PrimaryPart then
+                    info.position = tostring(obj.PrimaryPart.Position)
+                elseif obj:IsA("BasePart") then
+                    info.position = tostring(obj.Position)
+                else
+                    info.position = "n/a"
+                end
+                table.insert(found, info)
+                if #found >= MAX_PRINT then break end
+            end
+        end
+    end
+    return found
+end
+
+-- Função que imprime o relatório no servidor (Output)
+local function printReport(list)
+    print(("=== Brainrot Report (found %d) ==="):format(#list))
+    for i, item in ipairs(list) do
+        print(("%d) %s | %s | pos: %s"):format(i, item.name, item.class, item.position))
+    end
+    print("=== End Report ===")
+end
+
+-- Exemplo: coletar e imprimir ao iniciar (Server) ou ao jogador clicar (Local)
+local function runOnce()
+    local results = collectObjectsByName(SEARCH_KEYWORD)
+    printReport(results)
+end
+
+-- Se estiver em ambiente de desenvolvimento, execute logo
+if RunService:IsStudio() then
+    runOnce()
+else
+    -- Em servidor de produção, você pode chamar runOnce() quando quiser manualmente
+    runOnce()
+end
+
+-- Exporta as funções localmente caso queira chamá-las de outros scripts
+local SafeModule = {}
+SafeModule.collectObjectsByName = collectObjectsByName
+SafeModule.printReport = printReport
+return SafeModule
